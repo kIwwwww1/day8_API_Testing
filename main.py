@@ -1,61 +1,41 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel, Field
-from typing import List
 
-app = FastAPI(title="Simple Books CRUD API")
-
-class Book(BaseModel):
-    id: int
-    title: str = Field(..., min_length=1, max_length=100)
-    description: str
-    year: str
+app = FastAPI()
 
 books = [
-    {
-        "id": 1,
-        "title": "Harry Potter",
-        "description": "J. K. Rowling",
-        "year": "2001",
-    },
-    {
-        "id": 2,
-        "title": "Dune",
-        "description": "Frank Herbert",
-        "year": "1965",
-    },
+    {'id': 1,
+     'title': 'Гогаль',
+     'author': 'Мертвые души',
+     },
+
+     {'id': 2,
+     'title': 'Тургенев',
+     'author': 'Муму',
+     }
 ]
 
-@app.get("/books", response_model=List[Book])
-def get_books():
+class NewBook(BaseModel):
+    title: str 
+    author: str
+
+
+class Book(NewBook):
+    id: int = Field(default=len(books) + 1)
+
+
+@app.post('/add_book')
+async def add_book(new_book: Book):
+    book = {
+        'id': new_book.id,
+        'title': new_book.title,
+        'author': new_book.author,
+        }
+    books.append(book)
+    return {'True': 'message: Книга добавлена'}
+
+
+@app.get('/books')
+async def get_all_books() -> list[dict]:
     return books
 
-@app.get("/books/{book_id}", response_model=Book)
-def get_book(book_id: int):
-    for book in books:
-        if book["id"] == book_id:
-            return book
-    raise HTTPException(status_code=404, detail="Book not found")
-
-@app.post("/books", response_model=Book)
-def create_book(book: Book):
-    for b in books:
-        if b["id"] == book.id:
-            raise HTTPException(status_code=400, detail="Book with this ID already exists")
-    books.append(book.model_dump())
-    return book
-
-@app.put("/books/{book_id}", response_model=Book)
-def update_book(book_id: int, updated_book: Book):
-    for index, b in enumerate(books):
-        if b["id"] == book_id:
-            books[index] = updated_book.dict()
-            return updated_book
-    raise HTTPException(status_code=404, detail="Book not found")
-
-@app.delete("/books/{book_id}")
-def delete_book(book_id: int):
-    for index, b in enumerate(books):
-        if b["id"] == book_id:
-            books.pop(index)
-            return {"message": "Book deleted successfully"}
-    raise HTTPException(status_code=404, detail="Book not found")
